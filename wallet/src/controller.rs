@@ -20,7 +20,7 @@ use crate::api::{ApiServer, BasicAuthMiddleware, Handler, ResponseFuture, Router
 use crate::core::core;
 use crate::core::core::Transaction;
 use crate::core::libtx::slate::Slate;
-use crate::keychain::Keychain;
+use crate::keychain::{Identifier, Keychain};
 use crate::libwallet::api::{APIForeign, APIOwner};
 use crate::libwallet::types::{
 	CbData, NodeClient, OutputData, SendTXArgs, TxLogEntry, WalletBackend, WalletInfo,
@@ -85,13 +85,13 @@ where
 	let api_handler = OwnerAPIHandler::new(wallet.clone());
 
 	let mut router = Router::new();
-	if api_secret.is_some() {
-		let api_basic_auth =
-			"Basic ".to_string() + &to_base64(&("grin:".to_string() + &api_secret.unwrap()));
-		let basic_realm = "Basic realm=GrinOwnerAPI".to_string();
-		let basic_auth_middleware = Arc::new(BasicAuthMiddleware::new(api_basic_auth, basic_realm));
-		router.add_middleware(basic_auth_middleware);
-	}
+//	if api_secret.is_some() {
+//		let api_basic_auth =
+//			"Basic ".to_string() + &to_base64(&("grin:".to_string() + &api_secret.unwrap()));
+//		let basic_realm = "Basic realm=GrinOwnerAPI".to_string();
+//		let basic_auth_middleware = Arc::new(BasicAuthMiddleware::new(api_basic_auth, basic_realm));
+//		router.add_middleware(basic_auth_middleware);
+//	}
 	router
 		.add_route("/v1/wallet/owner/**", Arc::new(api_handler))
 		.map_err(|_| ErrorKind::GenericError("Router failed to add route".to_string()))?;
@@ -295,6 +295,12 @@ where
 	fn handle_get_request(&self, req: &Request<Body>) -> Result<Response<Body>, Error> {
 		let api = APIOwner::new(self.wallet.clone());
 
+		let all :Vec<&str> = req.uri().path()
+			.trim_right_matches("/")
+			.rsplit("/").collect();
+
+		api.set_active_account(all[1])?;
+
 		Ok(
 			match req
 				.uri()
@@ -309,9 +315,28 @@ where
 				"node_height" => json_response(&self.node_height(req, api)?),
 				"retrieve_txs" => json_response(&self.retrieve_txs(req, api)?),
 				"retrieve_stored_tx" => json_response(&self.retrieve_stored_tx(req, api)?),
+				"create_account_path" => json_response(&self.create_account_path(req, api)?),
 				_ => response(StatusCode::BAD_REQUEST, ""),
 			},
 		)
+	}
+	pub fn create_account_path(
+		&self,
+		req: &Request<Body>,
+		api: APIOwner<T, C, K>,
+	) -> Result<(String, Identifier), Error> {
+		let mut label= "default";
+
+		let params = parse_params(req);
+
+		if let Some(labels) = params.get("label") {
+			if let Some(x) = labels.first() {
+				label = x
+			}
+		}
+		let p = api.create_account_path(label)?;
+		let r = label.to_string();
+		Ok((r , p))
 	}
 
 	pub fn issue_send_tx(
@@ -468,35 +493,44 @@ where
 
 	fn handle_post_request(&self, req: Request<Body>) -> WalletResponseFuture {
 		let api = APIOwner::new(self.wallet.clone());
-		match req
-			.uri()
-			.path()
+
+		let all :Vec<&str> = req.uri().path()
 			.trim_right_matches("/")
-			.rsplit("/")
-			.next()
-			.unwrap()
-		{
-			"issue_send_tx" => Box::new(
-				self.issue_send_tx(req, api)
-					.and_then(|slate| ok(json_response_pretty(&slate))),
-			),
-			"finalize_tx" => Box::new(
-				self.finalize_tx(req, api)
-					.and_then(|slate| ok(json_response_pretty(&slate))),
-			),
-			"cancel_tx" => Box::new(
-				self.cancel_tx(req, api)
-					.and_then(|_| ok(response(StatusCode::OK, ""))),
-			),
-			"post_tx" => Box::new(
-				self.post_tx(req, api)
-					.and_then(|_| ok(response(StatusCode::OK, ""))),
-			),
-			_ => Box::new(err(ErrorKind::GenericError(
-				"Unknown error handling post request".to_owned(),
-			)
-			.into())),
+			.rsplit("/").collect();
+
+		let r = api.set_active_account(all[1]);
+
+		match r {
+			Ok(item) => match req
+				.uri()
+				.path()
+				.trim_right_matches("/")
+				.rsplit("/")
+				.next()
+				.unwrap()
+				{
+					"issue_send_tx" => Box::new(
+						self.issue_send_tx(req, api)
+							.and_then(|slate| ok(json_response_pretty(&slate))),
+					),
+					"finalize_tx" => Box::new(
+						self.finalize_tx(req, api)
+							.and_then(|slate| ok(json_response_pretty(&slate))),
+					),
+					"cancel_tx" => Box::new(
+						self.cancel_tx(req, api)
+							.and_then(|_| ok(response(StatusCode::OK, ""))),
+					),
+					"post_tx" => Box::new(
+						self.post_tx(req, api)
+							.and_then(|_| ok(response(StatusCode::OK, ""))),
+					),
+					_ => Box::new(err(ErrorKind::GenericError(
+						"Unknown error handling post request".to_owned()).into())),
+				}
+			Err(e) => Box::new(err(e))
 		}
+
 	}
 }
 
@@ -507,6 +541,8 @@ where
 	K: Keychain + 'static,
 {
 	fn get(&self, req: Request<Body>) -> ResponseFuture {
+		info!("url get log {:?}", req.uri().path());
+
 		match self.handle_get_request(&req) {
 			Ok(r) => Box::new(ok(r)),
 			Err(e) => {
@@ -517,6 +553,8 @@ where
 	}
 
 	fn post(&self, req: Request<Body>) -> ResponseFuture {
+		info!("url post log {:?}", req.uri().path());
+
 		Box::new(
 			self.handle_post_request(req)
 				.and_then(|r| ok(r))
@@ -595,24 +633,35 @@ where
 
 	fn handle_request(&self, req: Request<Body>) -> WalletResponseFuture {
 		let api = *APIForeign::new(self.wallet.clone());
-		match req
-			.uri()
-			.path()
-			.trim_right_matches("/")
-			.rsplit("/")
-			.next()
-			.unwrap()
-		{
-			"build_coinbase" => Box::new(
-				self.build_coinbase(req, api)
-					.and_then(|res| ok(json_response(&res))),
-			),
-			"receive_tx" => Box::new(
-				self.receive_tx(req, api)
-					.and_then(|res| ok(json_response(&res))),
-			),
-			_ => Box::new(ok(response(StatusCode::BAD_REQUEST, "unknown action"))),
-		}
+
+
+        	let all :Vec<&str> = req.uri().path()
+            		.trim_right_matches("/")
+            		.rsplit("/").collect();
+
+        	let r = api.set_active_account(all[1]);
+
+    		match r {
+            Ok(item) => match req
+                .uri()
+                .path()
+                .trim_right_matches("/")
+                .rsplit("/")
+                .next()
+                .unwrap()
+                {
+                    "build_coinbase" => Box::new(
+                        self.build_coinbase(req, api)
+                            .and_then(|res| ok(json_response(&res))),
+                    ),
+                    "receive_tx" => Box::new(
+                        self.receive_tx(req, api)
+                            .and_then(|res| ok(json_response(&res))),
+                    ),
+                    _ => Box::new(ok(response(StatusCode::BAD_REQUEST, "unknown action"))),
+                }
+            Err(e) => Box::new(err(e))
+        }
 	}
 }
 impl<T: ?Sized, C, K> Handler for ForeignAPIHandler<T, C, K>

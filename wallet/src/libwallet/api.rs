@@ -822,6 +822,12 @@ where
 	C: NodeClient,
 	K: Keychain,
 {
+    	pub fn set_active_account(&self, label: &str) -> Result<(), Error> {
+        	let mut w = self.wallet.lock();
+        	w.set_parent_key_id_by_name(label)?;
+        	Ok(())
+    	}
+
 	/// Create new API instance
 	pub fn new(wallet_in: Arc<Mutex<W>>) -> Box<Self> {
 		Box::new(APIForeign {
