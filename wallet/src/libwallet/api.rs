@@ -892,6 +892,12 @@ where
 		})
 	}
 
+	pub fn set_active_account(&self, label: &str) -> Result<(), Error> {
+		let mut w = self.wallet.lock();
+		w.set_parent_key_id_by_name(label)?;
+		Ok(())
+	}
+
 	/// Build a new (potential) coinbase transaction in the wallet
 	pub fn build_coinbase(&mut self, block_fees: &BlockFees) -> Result<CbData, Error> {
 		let mut w = self.wallet.lock();
