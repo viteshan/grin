@@ -338,9 +338,42 @@ where
 				"retrieve_txs" => json_response(&self.retrieve_txs(req, api)?),
 				"retrieve_stored_tx" => json_response(&self.retrieve_stored_tx(req, api)?),
 				"create_account_path" => json_response(&self.create_account_path(req, api)?),
+				"estimate_initiate_tx" => json_response(&self.estimate_initiate_tx(req, api)?),
 				_ => response(StatusCode::BAD_REQUEST, ""),
 			},
 		)
+	}
+
+	pub fn estimate_initiate_tx(
+		&self,
+		req: &Request<Body>,
+		mut api: APIOwner<T, C, K>,
+	) -> Result<(u64, u64), Error> {
+		let mut amount = 0;
+		let mut minimum_confirmations = 10;
+		let mut num_change_outputs = 1;
+		let mut amount = 0;
+		let params = parse_params(req);
+		let all = params.get("all").is_some();
+
+		if let Some(confs) = params.get("amount") {
+			if let Some(x) = confs.first() {
+				amount = core::amount_from_hr_string(x).unwrap()
+			}
+		}
+		if let Some(confs) = params.get("minimum_confirmations") {
+			if let Some(x) = confs.first() {
+				minimum_confirmations = x.parse().unwrap();
+			}
+		}
+
+		if let Some(confs) = params.get("num_change_outputs") {
+			if let Some(x) = confs.first() {
+				num_change_outputs = x.parse().unwrap();
+			}
+		}
+
+		api.estimate_initiate_tx(None, amount, minimum_confirmations, num_change_outputs, all)
 	}
 
 	pub fn issue_send_tx(
