@@ -358,7 +358,7 @@ where
 
 		if let Some(confs) = params.get("amount") {
 			if let Some(x) = confs.first() {
-				amount = core::amount_from_hr_string(x).unwrap()
+				amount = x.parse().unwrap();
 			}
 		}
 		if let Some(confs) = params.get("minimum_confirmations") {
