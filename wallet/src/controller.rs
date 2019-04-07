@@ -23,7 +23,8 @@ use crate::keychain::{Identifier, Keychain};
 use crate::libwallet::api::{APIForeign, APIOwner};
 use crate::libwallet::slate::Slate;
 use crate::libwallet::types::{
-	AcctPathMapping, CbData, NodeClient, OutputData, SendTXArgs, TxLogEntry, WalletBackend, WalletInfo,
+	AcctPathMapping, CbData, NodeClient, OutputData, SendTXArgs, TxLogEntry, WalletBackend,
+	WalletInfo,
 };
 use crate::libwallet::{Error, ErrorKind};
 use crate::util::secp::pedersen;
@@ -286,7 +287,6 @@ where
 		Ok((r, p))
 	}
 
-
 	pub fn set_account_path(
 		&self,
 		req: &Request<Body>,
@@ -303,7 +303,7 @@ where
 			}
 		}
 		if let Some(paths) = params.get("path") {
-			if let Some(x) = paths.first(){
+			if let Some(x) = paths.first() {
 				path = Identifier::from_hex(x)?
 			}
 		}
@@ -312,7 +312,6 @@ where
 		Ok((r, path))
 	}
 
-
 	pub fn accounts(
 		&self,
 		req: &Request<Body>,
@@ -320,7 +319,6 @@ where
 	) -> Result<Vec<AcctPathMapping>, Error> {
 		api.accounts()
 	}
-
 
 	pub fn retrieve_summary_info(
 		&self,

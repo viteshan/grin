@@ -228,12 +228,10 @@ where
 		keys::new_acct_path(&mut *w, label)
 	}
 
-
-	pub fn set_account_path(&self, label: &str, path: &Identifier,) -> Result<(), Error> {
+	pub fn set_account_path(&self, label: &str, path: &Identifier) -> Result<(), Error> {
 		let mut w = self.wallet.lock();
 		keys::set_acct_path(&mut *w, label, path)
 	}
-
 
 	/// Sets the wallet's currently active account. This sets the
 	/// BIP32 parent path used for most key-derivation operations.

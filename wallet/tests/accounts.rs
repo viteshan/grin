@@ -20,6 +20,7 @@ use self::core::global::ChainTypes;
 use self::keychain::{ExtKeychain, Keychain};
 use self::wallet::libwallet;
 use self::wallet::test_framework::{self, LocalWalletClient, WalletProxy};
+use crate::libwallet::{Error, ErrorKind};
 use grin_core as core;
 use grin_keychain as keychain;
 use grin_util as util;
@@ -27,7 +28,6 @@ use grin_wallet as wallet;
 use std::fs;
 use std::thread;
 use std::time::Duration;
-use crate::libwallet::{Error, ErrorKind};
 
 fn clean_output_dir(test_dir: &str) {
 	let _ = fs::remove_dir_all(test_dir);
@@ -258,21 +258,22 @@ fn accounts() {
 	}
 }
 
-
 #[test]
 fn test() {
-	let  err =  ErrorKind::NotEnoughFunds {
+	let err = ErrorKind::NotEnoughFunds {
 		available: 1,
 		available_disp: "000".to_string(),
 		needed: 4,
 		needed_disp: "0000".to_string(),
 	};
 
-
-
-	if let ErrorKind::NotEnoughFunds{
-		available, available_disp, needed, needed_disp
-	} = err {
+	if let ErrorKind::NotEnoughFunds {
+		available,
+		available_disp,
+		needed,
+		needed_disp,
+	} = err
+	{
 		println!("value: {}", available);
 	} else {
 		println!("value: nothing");
