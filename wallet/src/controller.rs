@@ -23,7 +23,7 @@ use crate::keychain::{Identifier, Keychain};
 use crate::libwallet::api::{APIForeign, APIOwner};
 use crate::libwallet::slate::Slate;
 use crate::libwallet::types::{
-	CbData, NodeClient, OutputData, SendTXArgs, TxLogEntry, WalletBackend, WalletInfo,
+	AcctPathMapping, CbData, NodeClient, OutputData, SendTXArgs, TxLogEntry, WalletBackend, WalletInfo,
 };
 use crate::libwallet::{Error, ErrorKind};
 use crate::util::secp::pedersen;
@@ -286,6 +286,42 @@ where
 		Ok((r, p))
 	}
 
+
+	pub fn set_account_path(
+		&self,
+		req: &Request<Body>,
+		api: APIOwner<T, C, K>,
+	) -> Result<(String, Identifier), Error> {
+		let mut label = "default";
+		let mut path = Identifier::zero();
+
+		let params = parse_params(req);
+
+		if let Some(labels) = params.get("label") {
+			if let Some(x) = labels.first() {
+				label = x
+			}
+		}
+		if let Some(paths) = params.get("path") {
+			if let Some(x) = paths.first(){
+				path = Identifier::from_hex(x)?
+			}
+		}
+		let p = api.set_account_path(label, &path)?;
+		let r = label.to_string();
+		Ok((r, path))
+	}
+
+
+	pub fn accounts(
+		&self,
+		req: &Request<Body>,
+		api: APIOwner<T, C, K>,
+	) -> Result<Vec<AcctPathMapping>, Error> {
+		api.accounts()
+	}
+
+
 	pub fn retrieve_summary_info(
 		&self,
 		req: &Request<Body>,
@@ -338,6 +374,8 @@ where
 				"retrieve_txs" => json_response(&self.retrieve_txs(req, api)?),
 				"retrieve_stored_tx" => json_response(&self.retrieve_stored_tx(req, api)?),
 				"create_account_path" => json_response(&self.create_account_path(req, api)?),
+				"set_account_path" => json_response(&self.set_account_path(req, api)?),
+				"accounts" => json_response(&self.accounts(req, api)?),
 				"estimate_initiate_tx" => json_response(&self.estimate_initiate_tx(req, api)?),
 				_ => response(StatusCode::BAD_REQUEST, ""),
 			},

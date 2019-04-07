@@ -27,6 +27,7 @@ use grin_wallet as wallet;
 use std::fs;
 use std::thread;
 use std::time::Duration;
+use crate::libwallet::{Error, ErrorKind};
 
 fn clean_output_dir(test_dir: &str) {
 	let _ = fs::remove_dir_all(test_dir);
@@ -254,5 +255,26 @@ fn accounts() {
 	let test_dir = "test_output/accounts";
 	if let Err(e) = accounts_test_impl(test_dir) {
 		panic!("Libwallet Error: {} - {}", e, e.backtrace().unwrap());
+	}
+}
+
+
+#[test]
+fn test() {
+	let  err =  ErrorKind::NotEnoughFunds {
+		available: 1,
+		available_disp: "000".to_string(),
+		needed: 4,
+		needed_disp: "0000".to_string(),
+	};
+
+
+
+	if let ErrorKind::NotEnoughFunds{
+		available, available_disp, needed, needed_disp
+	} = err {
+		println!("value: {}", available);
+	} else {
+		println!("value: nothing");
 	}
 }
