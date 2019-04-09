@@ -89,13 +89,13 @@ where
 	let api_handler = OwnerAPIHandler::new(wallet.clone());
 
 	let mut router = Router::new();
-//	if api_secret.is_some() {
-//		let api_basic_auth =
-//			"Basic ".to_string() + &to_base64(&("grin:".to_string() + &api_secret.unwrap()));
-//		let basic_auth_middleware =
-//			Arc::new(BasicAuthMiddleware::new(api_basic_auth, &GRIN_BASIC_REALM));
-//		router.add_middleware(basic_auth_middleware);
-//	}
+	//	if api_secret.is_some() {
+	//		let api_basic_auth =
+	//			"Basic ".to_string() + &to_base64(&("grin:".to_string() + &api_secret.unwrap()));
+	//		let basic_auth_middleware =
+	//			Arc::new(BasicAuthMiddleware::new(api_basic_auth, &GRIN_BASIC_REALM));
+	//		router.add_middleware(basic_auth_middleware);
+	//	}
 	router
 		.add_route("/v1/wallet/owner/**", Arc::new(api_handler))
 		.map_err(|_| ErrorKind::GenericError("Router failed to add route".to_string()))?;
@@ -649,12 +649,7 @@ where
 
 	fn handle_post_request(&self, req: Request<Body>) -> WalletResponseFuture {
 		let api = APIOwner::new(self.wallet.clone());
-		let all: Vec<&str> = req
-			.uri()
-			.path()
-			.trim_end_matches("/")
-			.rsplit("/")
-			.collect();
+		let all: Vec<&str> = req.uri().path().trim_end_matches("/").rsplit("/").collect();
 
 		let r = api.set_active_account(all[1]);
 
@@ -796,12 +791,7 @@ where
 
 	fn handle_request(&self, req: Request<Body>) -> WalletResponseFuture {
 		let api = *APIForeign::new(self.wallet.clone());
-		let all: Vec<&str> = req
-			.uri()
-			.path()
-			.trim_end_matches("/")
-			.rsplit("/")
-			.collect();
+		let all: Vec<&str> = req.uri().path().trim_end_matches("/").rsplit("/").collect();
 
 		let r = api.set_active_account(all[1]);
 
