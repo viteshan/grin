@@ -249,7 +249,7 @@ fn update_dandelion_relay(peers: Arc<p2p::Peers>, dandelion_config: DandelionCon
 	let dandelion_relay = peers.get_dandelion_relay();
 	if let Some((last_added, _)) = dandelion_relay {
 		let dandelion_interval = Utc::now().timestamp() - last_added;
-		if dandelion_interval >= dandelion_config.relay_secs.unwrap() as i64 {
+		if dandelion_interval >= dandelion_config.relay_secs() as i64 {
 			debug!("monitor_peers: updating expired dandelion relay");
 			peers.update_dandelion_relay();
 		}
@@ -311,7 +311,7 @@ fn listen_for_addrs(
 	let addrs: Vec<PeerAddr> = rx.try_iter().collect();
 
 	// If we have a healthy number of outbound peers then we are done here.
-	if peers.healthy_peers_mix() {
+	if peers.peer_count() > peers.peer_outbound_count() && peers.healthy_peers_mix() {
 		return;
 	}
 
@@ -331,7 +331,9 @@ fn listen_for_addrs(
 				);
 				continue;
 			} else {
-				*connecting_history.get_mut(&addr).unwrap() = now;
+				if let Some(history) = connecting_history.get_mut(&addr) {
+					*history = now;
+				}
 			}
 		}
 		connecting_history.insert(addr, now);

@@ -16,7 +16,9 @@
 //! invocations) as needed.
 //! Still experimental
 use crate::adapters::{FileWalletCommAdapter, HTTPWalletCommAdapter, KeybaseWalletCommAdapter};
-use crate::api::{ApiServer, BasicAuthMiddleware, Handler, ResponseFuture, Router, TLSConfig};
+use crate::api::{
+	ApiServer, BasicAuthMiddleware, Handler, ResponseFuture, Router, TLSConfig, GRIN_BASIC_REALM,
+};
 use crate::core::core;
 use crate::core::core::Transaction;
 use crate::keychain::{Identifier, Keychain};
@@ -87,13 +89,13 @@ where
 	let api_handler = OwnerAPIHandler::new(wallet.clone());
 
 	let mut router = Router::new();
-	//	if api_secret.is_some() {
-	//		let api_basic_auth =
-	//			"Basic ".to_string() + &to_base64(&("grin:".to_string() + &api_secret.unwrap()));
-	//		let basic_realm = "Basic realm=GrinOwnerAPI".to_string();
-	//		let basic_auth_middleware = Arc::new(BasicAuthMiddleware::new(api_basic_auth, basic_realm));
-	//		router.add_middleware(basic_auth_middleware);
-	//	}
+//	if api_secret.is_some() {
+//		let api_basic_auth =
+//			"Basic ".to_string() + &to_base64(&("grin:".to_string() + &api_secret.unwrap()));
+//		let basic_auth_middleware =
+//			Arc::new(BasicAuthMiddleware::new(api_basic_auth, &GRIN_BASIC_REALM));
+//		router.add_middleware(basic_auth_middleware);
+//	}
 	router
 		.add_route("/v1/wallet/owner/**", Arc::new(api_handler))
 		.map_err(|_| ErrorKind::GenericError("Router failed to add route".to_string()))?;
@@ -361,7 +363,7 @@ where
 			match req
 				.uri()
 				.path()
-				.trim_right_matches("/")
+				.trim_end_matches("/")
 				.rsplit("/")
 				.next()
 				.unwrap()
@@ -650,7 +652,7 @@ where
 		let all: Vec<&str> = req
 			.uri()
 			.path()
-			.trim_right_matches("/")
+			.trim_end_matches("/")
 			.rsplit("/")
 			.collect();
 
@@ -797,7 +799,7 @@ where
 		let all: Vec<&str> = req
 			.uri()
 			.path()
-			.trim_right_matches("/")
+			.trim_end_matches("/")
 			.rsplit("/")
 			.collect();
 
